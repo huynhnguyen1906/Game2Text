@@ -1,5 +1,17 @@
+import sys
+import io
+
+# Redirect stdout/stderr ngay từ đầu
+if not sys.stdout:
+    sys.stdout = io.StringIO()
+if not sys.stderr:
+    sys.stderr = io.StringIO()
+
+# Rồi mới import eel (và các thứ liên quan)
 import eel
 import threading, os, platform, time, concurrent.futures
+...
+
 thread_pool_ref = concurrent.futures.ThreadPoolExecutor # Necessary for distribution to import ThreadPoolExecutor before app code
 from pathlib import Path
 from ocr import detect_and_log
