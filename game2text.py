@@ -226,16 +226,26 @@ def run_eel():
     port=int(r_config(APP_CONFIG, "port"))
     )
 
-main_thread = threading.Thread(target=run_eel, args=())
-main_thread.start()
+if __name__ == '__main__':
+    main_thread = threading.Thread(target=run_eel, args=())
+    main_thread.start()
 
-# Thread to load dictionaries
-dictionary_thread = threading.Thread(target=load_all_dictionaries, args=()) 
-dictionary_thread.start()
+    # Thread to load dictionaries
+    dictionary_thread = threading.Thread(target=load_all_dictionaries, args=()) 
+    dictionary_thread.start()
 
-# Thread to export clipboard text continuously
-clipboard_timer = RepeatedTimer(1, clipboard_to_output)
-clipboard_timer.stop() # stop the initial timer
+    # Thread to export clipboard text continuously
+    clipboard_timer = RepeatedTimer(1, clipboard_to_output)
+    clipboard_timer.stop()
 
-with keyboard.GlobalHotKeys(hotkey_map) as listener:
-    listener.join()
+    # Setup global hotkeys
+    from hotkeys import setup_hotkeys
+    setup_hotkeys()
+
+    # Keep main thread running
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Exiting...")
+        os._exit(0)
