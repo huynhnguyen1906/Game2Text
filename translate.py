@@ -1,6 +1,7 @@
 import translators as ts
 import requests
 import time
+import openai
 from config import r_config, TRANSLATION_CONFIG
 
 def multi_translate(text):
@@ -48,6 +49,23 @@ def deepl_translate(text):
     return 'Failed to Translate'
 
 def google_translate(text):
-    # ts.preaccelerate()
-    result = ts.translate_text(text, 'google')
-    return result
+    try:
+        openai.api_key = r_config(TRANSLATION_CONFIG, "openai_api_key")
+        response = openai.ChatCompletion.create(
+            model="gpt-4o-mini",  # Sử dụng model gpt-4o-mini theo yêu cầu
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        f"Translate from {r_config(TRANSLATION_CONFIG, 'source_lang')} to {r_config(TRANSLATION_CONFIG, 'target_lang')}. "
+                        "This text is a dialogue spoken by characters in the video game 'Wuthering Waves'. "
+                        "If there are any unclear or unreadable words, please infer their meaning based on context."
+                    )
+                },
+                {"role": "user", "content": text}
+            ],
+            temperature=0.3
+        )
+        return response.choices[0].message.content.strip()
+    except Exception as e:
+        return f"Translation Error: {str(e)}"
