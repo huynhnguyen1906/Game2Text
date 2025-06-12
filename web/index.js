@@ -256,7 +256,7 @@ function openLogWindow() {
 
 eel.expose(getOutputText);
 function getOutputText() {
-	return output.innerText;
+	return { value: output.innerText };
 }
 
 function translate(text) {
@@ -265,8 +265,9 @@ function translate(text) {
 		translation = { sourceText: text, translatedText };
 		updateText(translatedOutput, translatedText);
 		translatedOutput.hidden = false;
-		return translatedText;
+		return { value: translatedText }; // Sửa lại định dạng trả về
 	})();
+	return { value: true }; // Đảm bảo hàm luôn trả về đúng định dạng
 }
 
 function updateText(element, text) {
@@ -416,6 +417,7 @@ function refreshOCR() {
 			ctx.clearRect(0, 0, cv1.width, cv1.height); // clear canvas
 		}
 	}
+	return { value: true };
 }
 
 /*
@@ -426,12 +428,13 @@ function refreshOCR() {
 
 eel.expose(getCachedScreenshots);
 function getCachedScreenshots() {
-	return cachedScreenshots;
+	return { value: cachedScreenshots };
 }
 
 eel.expose(removeCachedScreenshot);
 function removeCachedScreenshot(key) {
 	delete cachedScreenshots[key];
+	return { value: true };
 }
 
 function cacheScreenshot(imageData, logId) {
@@ -592,7 +595,7 @@ function getVideoImage() {
 	}
 	let fullImageDataURL = cv3.toDataURL(`image/${logImageType === "jpg" ? "jpeg" : logImageType}`, logImageQuality);
 	const fullImageb64 = fullImageDataURL.slice(fullImageDataURL.indexOf(",") + 1);
-	return fullImageb64;
+	return { value: fullImageb64 }; // Sửa lại định dạng trả về
 }
 
 function recognize_image(image) {
@@ -869,6 +872,7 @@ function setAnkiFields(modelName, fieldNames) {
 		updateFieldValuesTable(ankiModelFieldMap[cardModel]);
 		modelFieldsNeedLoad = false;
 	}
+	return { value: true };
 }
 
 async function reloadAnki() {
@@ -880,7 +884,7 @@ async function reloadAnki() {
 
 eel.expose(getFieldValueMap);
 function getFieldValueMap() {
-	return fieldValueMap;
+	return { value: fieldValueMap };
 }
 
 /**
@@ -976,5 +980,5 @@ function cropVideo() {
 eel.expose(resetPreviousText);
 function resetPreviousText() {
 	previousText = "";
-	return { success: true };
+	return { value: true }; // Sửa lại định dạng trả về
 }

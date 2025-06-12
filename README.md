@@ -5,27 +5,34 @@
 [Game2Text](https://www.game2text.com) is an all-in-one application that helps you learn languages from the games you play.
 
 ## Platforms
+
 - Windows 10
 - Mac OSX Mojave, Catalina
+- python version 3.10.11
 
 ## Text Extraction Modes
+
 - Classic OCR with Tesseract, Tesseract Legacy, or OCR Space.
-- OCR-assisted game script matching. You can find game scripts in [this repository](https://github.com/mathewthe2/Game2Text-GameScripts). 
+- OCR-assisted game script matching. You can find game scripts in [this repository](https://github.com/mathewthe2/Game2Text-GameScripts).
 - Text hooking for Visual Novels
 - Clipboard to Game2Text
 
 ## Features
+
 - Dictionary lookup with browser dictionaries like Yomichan and Rikaichan
 - Translation tools including DeepL, Papago, and Google Translate.
 - Create game flashcards with screenshot and game audio via Anki and AnkiConnect
 
-## Download 
-[Download Game2Text](https://game2text.com/download/) 
+## Download
+
+[Download Game2Text](https://game2text.com/download/)
 
 ## User Guide
+
 [Read User Guide](https://game2text.com/user-guide/quick-start/)
 
 ## FAQ
+
 [Read FAQ](https://game2text.com/faq/switch-browser/)
 
 ## Development
@@ -60,17 +67,17 @@ python -m unittest
 
 ## Distribution
 
-Unzip *resources/sudachidict_small.zip* into the same directory.
+Unzip _resources/sudachidict_small.zip_ into the same directory.
 
-Windows: 
+Windows:
 
-```build.bat```
+`build.bat`
 
 Mac:
 
-```sh build.sh```
+`sh build.sh`
 
-Temporary fix for all read/write operations using *os.path* on Mac builds with pyinstaller: create a wrapper file that runs the Game2Text executable inside the package
+Temporary fix for all read/write operations using _os.path_ on Mac builds with pyinstaller: create a wrapper file that runs the Game2Text executable inside the package
 
 ## Acknowledgement
 
@@ -85,11 +92,8 @@ Temporary fix for all read/write operations using *os.path* on Mac builds with p
 |    [Textractor](https://github.com/Artikash/Textractor)     |            Texthooker            | 4.16.1  |
 |              [FFmpeg](https://www.ffmpeg.org/)              |         Audio Converter          |   4.4   |
 
-
-
 #### Resources
 
 Jun Mako (Game Scripts)
 
 Unboxious (Game Scripts)
-
