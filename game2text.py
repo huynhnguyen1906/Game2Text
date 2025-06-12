@@ -75,6 +75,9 @@ def open_game_text_script():
 @eel.expose
 def update_main_window_text(text):
     is_log_text = False
+    # Đảm bảo cập nhật text từ logs luôn có hiệu lực
+    # bằng cách reset previousText nếu cần
+    eel.resetPreviousText()()
     eel.updateOutput(text, is_log_text)()
 
 @eel.expose
@@ -237,6 +240,9 @@ if __name__ == '__main__':
     # Thread to export clipboard text continuously
     clipboard_timer = RepeatedTimer(1, clipboard_to_output)
     clipboard_timer.stop()
+
+    # Thread to reset main window state every 30 minutes
+    reset_window_timer = RepeatedTimer(1800, lambda: eel.resetPreviousText()())  # 1800 giây = 30 phút
 
     # Setup global hotkeys
     from hotkeys import setup_hotkeys

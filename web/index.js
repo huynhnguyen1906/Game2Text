@@ -285,8 +285,9 @@ function updateText(element, text) {
 /* Update result with possible translation */
 eel.expose(updateOutput);
 function updateOutput(text, logging = true) {
-	// prevent duplicate output
-	if (text.trim() === previousText.trim()) {
+	// Chỉ kiểm tra trùng lặp khi là log mới (logging = true)
+	// Nếu được gọi từ logs.js (logging = false), luôn cập nhật
+	if (logging && text.trim() === previousText.trim()) {
 		return { value: false }; // Thêm return value
 	}
 	previousText = text;
@@ -969,4 +970,11 @@ function cropVideo() {
 			croppedVideoCanvas.hidden = false;
 		}, 20);
 	}
+}
+
+/* Reset previousText variable */
+eel.expose(resetPreviousText);
+function resetPreviousText() {
+	previousText = "";
+	return { success: true };
 }

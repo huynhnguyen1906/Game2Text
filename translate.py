@@ -1,7 +1,7 @@
 import translators as ts
 import requests
 import time
-import openai
+# OpenAI is now imported directly in the google_translate function
 from config import r_config, TRANSLATION_CONFIG
 
 def multi_translate(text):
@@ -50,16 +50,18 @@ def deepl_translate(text):
 
 def google_translate(text):
     try:
-        openai.api_key = r_config(TRANSLATION_CONFIG, "openai_api_key")
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",  # Sử dụng model gpt-4o-mini theo yêu cầu
+        from openai import OpenAI
+        
+        client = OpenAI(api_key=r_config(TRANSLATION_CONFIG, "openai_api_key"))
+        response = client.chat.completions.create(
+            model="gpt-4.1-mini",  
             messages=[
                 {
                     "role": "system",
                     "content": (
-                        f"Translate from {r_config(TRANSLATION_CONFIG, 'source_lang')} to {r_config(TRANSLATION_CONFIG, 'target_lang')}. "
-                        "This text is a dialogue spoken by characters in the video game 'Wuthering Waves'. "
-                        "If there are any unclear or unreadable words, please infer their meaning based on context."
+                        f"Hãy dịch văn bản từ tiếng anh sang tiếng việt"
+                        "Đây là các đoạn thoại của game 'Wuthering Waves' "
+                        "Nếu có từ nào không rõ ràng, hãy cố gắng dự đoán nó và tiếp tục phần dịch"
                     )
                 },
                 {"role": "user", "content": text}
