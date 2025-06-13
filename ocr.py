@@ -15,7 +15,18 @@ def get_temp_image_path():
 def detect_and_log(engine, cropped_image,  text_orientation, session_start_time, request_time):
     result = image_to_text(engine, cropped_image, text_orientation)
     if result is not None:
-        log_text(session_start_time, request_time, result)
+        # Auto-translate the OCR result
+        translated_text = None
+        try:
+            # Only translate if the result is not empty
+            if result and len(result.strip()) > 0:
+                from translate import multi_translate
+                translated_text = multi_translate(result)
+        except Exception as e:
+            print(f"Translation error in OCR: {str(e)}")
+            
+        # Log both the original text and the translation
+        log_text(session_start_time, request_time, result, translated_text)
         log_media(session_start_time, request_time)
         return {'id': request_time, 'result': result }
     else:

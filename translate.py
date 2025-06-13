@@ -54,14 +54,14 @@ def google_translate(text):
         
         client = OpenAI(api_key=r_config(TRANSLATION_CONFIG, "openai_api_key"))
         response = client.chat.completions.create(
-            model="gpt-4.1-mini",  
+            model="gpt-4.1-nano",  
             messages=[
                 {
                     "role": "system",
                     "content": (
-                        f"Hãy dịch văn bản từ tiếng anh sang tiếng việt"
-                        "Đây là các đoạn thoại của game 'Wuthering Waves' "
-                        "Nếu có từ nào không rõ ràng, hãy cố gắng dự đoán nó và tiếp tục phần dịch"
+                        "Hãy dịch văn bản từ tiếng Anh sang tiếng Việt. "
+                        "Đây là các đoạn thoại của game 'Wuthering Waves'. "
+                        "Nếu có từ nào không rõ ràng, hãy cố gắng dự đoán và tiếp tục phần dịch."
                     )
                 },
                 {"role": "user", "content": text}

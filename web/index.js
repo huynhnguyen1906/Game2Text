@@ -265,6 +265,12 @@ function translate(text) {
 		translation = { sourceText: text, translatedText };
 		updateText(translatedOutput, translatedText);
 		translatedOutput.hidden = false;
+		// Update the log with the translated text if we have a current log ID
+		if (currentTextLogId && translatedText) {
+			// Update the log with translation
+			eel.update_log_with_translation(currentTextLogId, text, translatedText)();
+		}
+
 		return { value: translatedText }; // Sửa lại định dạng trả về
 	})();
 	return { value: true }; // Đảm bảo hàm luôn trả về đúng định dạng

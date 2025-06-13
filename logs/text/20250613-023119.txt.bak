@@ -1,0 +1,4 @@
+20250613-023152, We need to expose a new function for JavaScript to use, but we have an issue:there's amismatch between the signaturein Python and how were callingitたにたロードーニー|||TRANSLATION|||Chúng ta cần công bố một hàm mới để JavaScript sử dụng, nhưng chúng ta gặp vấn đề:
+có sự không khớp giữa chữ ký hàm trong Python và cách chúng ta gọi nó.
+20250613-023223, Weneed to expose anew function for JavaScriptto use, but we have anissue:there's amismatch between the signaturein Python and how were callingitにすい|||TRANSLATION|||Chúng ta cần công bố một chức năng mới để JavaScript sử dụng, nhưng chúng ta gặp một vấn đề:
+có sự không khớp giữa chữ ký (signature) trong Python và cách chúng ta gọi nó.

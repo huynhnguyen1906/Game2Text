@@ -1,0 +1,21 @@
+/* Định dạng cho phần dịch */
+.translation-divider {
+	border: 0;
+	height: 1px;
+	background-color: #ccc;
+	margin: 8px 0;
+}
+
+.has-translation {
+	padding: 5px 0;
+}
+
+/* Định dạng văn bản dịch với màu khác để phân biệt */
+.has-translation hr + * {
+	color: var(--primary);
+	font-style: italic;
+}
+
+.dark-theme .has-translation hr + * {
+	color: var(--purple-100);
+}

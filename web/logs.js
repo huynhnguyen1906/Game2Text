@@ -482,7 +482,16 @@ function logToHtml(log) {
 		}
 	}
 
-	logText.innerText = log.text;
+	// Cập nhật hiển thị với định dạng mới để bao gồm bản dịch
+	if (log.translated_text) {
+		// Tạo định dạng hiển thị: văn bản gốc + dòng phân cách + bản dịch
+		logText.innerHTML = `${log.text}<hr class="translation-divider">${log.translated_text}`;
+		// Thêm class để CSS có thể định dạng
+		logText.classList.add("has-translation");
+	} else {
+		logText.innerText = log.text;
+	}
+
 	logItemClone.hidden = false;
 	return logItemClone;
 }

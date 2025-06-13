@@ -22,7 +22,7 @@ from textractor import Textractor
 from tools import path_to_textractor, open_folder_textractor_path
 from pynput import keyboard
 from clipboard import clipboard_to_output, text_to_clipboard
-from logger import get_time_string, log_text, log_media, update_log_text
+from logger import get_time_string, log_text, log_media, update_log_text, repair_log_files
 from ankiconnect import invoke, get_anki_models, update_anki_models, create_anki_note, fetch_anki_fields
 from imageprofile import export_image_profile, load_image_profiles, open_image_profile
 from gamescript import load_game_scripts, open_game_script
@@ -48,7 +48,18 @@ def recognize_image(engine, image, orientation):
 @eel.expose
 def log_output(text):
     log_id = get_time_string()
-    log_text(session_start_time, log_id, text)
+    
+    # Automatically translate the text for logging
+    translated_text = None
+    try:
+        # Only translate if the text is not empty
+        if text and len(text.strip()) > 0:
+            translated_text = multi_translate(text)
+    except Exception as e:
+        print(f"Translation error: {str(e)}")
+        
+    # Log the text with its translation
+    log_text(session_start_time, log_id, text, translated_text)
     log_media(session_start_time, log_id)
     return log_id
 
@@ -217,11 +228,24 @@ def open_new_window(html_file, height=900, width=600):
     return
 
 def run_eel():
+    # Initialize Eel
     eel.init('web', allowed_extensions=['.js', '.html', '.map'])
+    
+    # Repair any corrupted log files before starting the application
+    try:
+        num_fixed = repair_log_files()
+        if num_fixed > 0:
+            print(f"Fixed {num_fixed} corrupted log files at startup")
+    except Exception as e:
+        print(f"Error repairing log files: {str(e)}")
+    
+    # Configure browser settings
     browser_mode = get_default_browser_name() if r_config(APP_CONFIG, "browser") == 'default' else r_config(APP_CONFIG, "browser")
     paths_config = r_config_section('PATHS')
     if 'browser' in paths_config:
         eel.browsers.set_path(browser_mode, paths_config['browser'])
+    
+    # Start the application
     eel.start('index.html',
     close_callback=close, 
     mode=browser_mode, 
