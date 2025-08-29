@@ -111,33 +111,46 @@ def show_logs():
 
 
 def text_to_log(text, file_path):
-    # Validate the log format - first check if text is long enough
-    if not text or len(text) < 16:  # Must have at least timestamp (15) and comma (1)
-        # Create a fallback log entry
-        log_id = get_time_string()
-        date = parse_time_string(log_id)
-        return {
-            'id': log_id,
-            'file': Path(file_path).name,
-            'folder': Path(file_path).stem,
-            'image': None,
-            'image_type': None,
-            'audio': '',
-            'hours': get_hours_string(date),
-            'text': f"Invalid log entry: {text}",
-            'translated_text': None
-        }
+    # Validate the log format - first check if text is long enough and has proper format
+    text = text.strip()
+    if not text or len(text) < 17:  # Must have at least timestamp (15) + ", " (2)
+        return None  # Return None for invalid entries instead of creating error logs
     
     try:
         # Try to extract timestamp (should be the first 15 characters)
         log_id = text[:15]
+        
+        # Validate timestamp format with regex
+        if not re.match(r'^\d{8}-\d{6}$', log_id):
+            return None  # Return None for invalid timestamp format
+            
         date = parse_time_string(log_id)
         
+        # Check if there's a comma and space after timestamp
+        if len(text) < 17 or text[15:17] != ', ':
+            return None  # Return None if format is incorrect
+            
         # Extract content (should start after timestamp + comma + space = 17 chars)
-        if len(text) <= 17:
-            content = ""
+        content = text[17:] if len(text) > 17 else ""
+            
+        # Only get image if we have a valid timestamp
+        image = get_base64_image_with_log(log_id=log_id, folder_name=Path(file_path).stem)
+        image_type = get_image_type(log_id=log_id, folder_name=Path(file_path).stem)
+        
+        # Check if text contains translation
+        translated_text = None
+        
+        # If translation delimiter is found
+        if "|||TRANSLATION|||" in content:
+            parts = content.split("|||TRANSLATION|||", 1)
+            original_text = parts[0].strip()
+            translated_text = parts[1].strip()
         else:
-            content = text[17:]  # Skip timestamp (15) + comma + space (2)
+            original_text = content.strip()
+            
+    except ValueError:
+        # If parsing fails, return None instead of creating error entries
+        return None
             
         # Only get image if we have a valid timestamp
         image = get_base64_image_with_log(log_id=log_id, folder_name=Path(file_path).stem)
@@ -196,9 +209,27 @@ def get_logs(limit=0):
     try:
         with open(latest_file, 'r', encoding='utf-8') as f:
             for line in f:
+                line = line.strip()  # Remove whitespace and newlines
+                
+                # Skip empty lines
+                if not line:
+                    continue
+                    
+                # Skip lines that are too short to contain a valid log entry
+                if len(line) < 17:  # timestamp (15) + comma + space + at least some content
+                    print(f"Skipping short line: {line}")
+                    continue
+                
+                # Check if line starts with a valid timestamp
+                if not re.match(r'^\d{8}-\d{6},', line):
+                    print(f"Skipping line without valid timestamp: {line[:30]}...")
+                    continue
+                
                 try:
                     log = text_to_log(line, latest_file)
-                    output.append(log)
+                    # Only add logs that are not None and have actual text content
+                    if log is not None and log.get('text', '').strip():
+                        output.append(log)
                 except Exception as e:
                     print(f"Error parsing log line: {str(e)}")
                     # Continue processing other lines
@@ -228,16 +259,30 @@ def get_latest_log():
         return {}
     
     try:
-        # Read the file safely
-        last_line = ""
+        # Read the file safely and find the last valid line
+        last_valid_line = ""
         with open(latest_file, 'r', encoding='utf-8') as f:
             for line in f:
-                if line.strip():  # Only consider non-empty lines
-                    last_line = line
+                line = line.strip()  # Remove whitespace and newlines
+                
+                # Skip empty lines
+                if not line:
+                    continue
+                    
+                # Skip lines that are too short to contain a valid log entry
+                if len(line) < 17:  # timestamp (15) + comma + space + at least some content
+                    continue
+                
+                # Check if line starts with a valid timestamp and has content
+                if re.match(r'^\d{8}-\d{6},', line) and len(line) > 17:
+                    # Check if there's actual content after the timestamp
+                    content_part = line[17:].strip()
+                    if content_part:  # Only consider lines with actual content
+                        last_valid_line = line
             f.close()
         
         # If we couldn't find any valid line
-        if not last_line:
+        if not last_valid_line:
             # Create a dummy log with the current time
             log_id = get_time_string()
             date = parse_time_string(log_id)
@@ -254,9 +299,23 @@ def get_latest_log():
             }
             return log
 
-        # Try to parse the last line
+        # Try to parse the last valid line
         try:
-            log = text_to_log(last_line, latest_file)
+            log = text_to_log(last_valid_line, latest_file)
+            if log is None:  # If text_to_log returns None, create a fallback
+                log_id = get_time_string()
+                date = parse_time_string(log_id)
+                log = {
+                    'id': log_id,
+                    'file': Path(latest_file).name,
+                    'folder': Path(latest_file).stem,
+                    'image': None, 
+                    'image_type': None,
+                    'audio': '',
+                    'hours': get_hours_string(date),
+                    'text': 'Unable to parse latest log entry',
+                    'translated_text': None
+                }
         except Exception as e:
             print(f"Error parsing latest log: {str(e)}")
             # Create a fallback log
@@ -270,7 +329,7 @@ def get_latest_log():
                 'image_type': None,
                 'audio': '',
                 'hours': get_hours_string(date),
-                'text': f"Error in last log: {last_line[:30]}...",
+                'text': f"Error in last log: {last_valid_line[:30]}...",
                 'translated_text': None
             }
     except Exception as e:
