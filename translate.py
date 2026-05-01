@@ -59,9 +59,7 @@ def google_translate(text):
                 {
                     "role": "system",
                     "content": (
-                        "Hãy dịch văn bản từ tiếng Anh sang tiếng Việt. "
-                        "Đây là các đoạn thoại của game 'Wuthering Waves'. "
-                        "Nếu có từ nào không rõ ràng, hãy cố gắng dự đoán và tiếp tục phần dịch."
+                        "Đây là các đoạn thoại của game. Hãy dịch văn bản từ tiếng Anh sang tiếng Việt. Bạn hoàn toàn có thể bỏ qua các ký tự không phải tiếng anh và không rõ nghĩa và Nếu có từ nào không rõ ràng, hãy cố gắng dự đoán và tiếp tục phần dịch. Chỉ cần trả ra mỗi bản dịch không cần nói gì thêm và trả ra trên 1 dòng không cần xuống dòng. "
                     )
                 },
                 {"role": "user", "content": text}
