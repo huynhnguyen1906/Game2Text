@@ -17,12 +17,26 @@ TEXT_LOG_PATH = Path(bundle_dir, 'logs', 'text')
 IMAGE_LOG_PATH = Path(bundle_dir, 'logs', 'images')
 
 game_script_matcher = None
+log_file_lock = threading.Lock()
+LOG_ID_PATTERN = re.compile(r'^\d{8}-\d{6}(?:-\d{3,6})?$')
+LOG_ID_PREFIX_PATTERN = re.compile(r'^\d{8}-\d{6}')
 
 def get_time_string():
-    return time.strftime('%Y%m%d-%H%M%S')
+    return datetime.now().strftime('%Y%m%d-%H%M%S-%f')
 
 def parse_time_string(time_string):
-    return datetime.strptime(time_string, '%Y%m%d-%H%M%S')
+    return datetime.strptime(time_string[:15], '%Y%m%d-%H%M%S')
+
+def is_valid_log_id(log_id):
+    return bool(LOG_ID_PATTERN.match(log_id))
+
+def split_log_line(text):
+    if ', ' not in text:
+        return None, None
+    log_id, content = text.split(', ', 1)
+    if not is_valid_log_id(log_id):
+        return None, None
+    return log_id, content
 
 def get_hours_string(datetime_object):
     return datetime.strftime(datetime_object, '%I:%M%p')
@@ -40,12 +54,13 @@ def log_text(start_time, request_time, text, translated_text=None):
         # Sử dụng ký tự phân cách |||TRANSLATION||| để phân biệt giữa văn bản gốc và bản dịch
         log_content = f"{parsed_text}|||TRANSLATION|||{translated_text}"
     
-    with open(filename, 'a', encoding='utf-8', newline='') as f:
-        if(os.path.getsize(filename) > 0):
-            f.write('{}{}, {}'.format('\n', request_time, log_content))
-        else:
-            f.write('{}, {}'.format(request_time, log_content))
-        f.close()
+    with log_file_lock:
+        with open(filename, 'a', encoding='utf-8', newline='') as f:
+            if(os.path.getsize(filename) > 0):
+                f.write('{}{}, {}'.format('\n', request_time, log_content))
+            else:
+                f.write('{}, {}'.format(request_time, log_content))
+            f.close()
         
 def log_media(session_start_time, request_time):
     is_log_images = r_config(LOG_CONFIG, 'logimages').lower() == 'true'
@@ -117,21 +132,11 @@ def text_to_log(text, file_path):
         return None  # Return None for invalid entries instead of creating error logs
     
     try:
-        # Try to extract timestamp (should be the first 15 characters)
-        log_id = text[:15]
-        
-        # Validate timestamp format with regex
-        if not re.match(r'^\d{8}-\d{6}$', log_id):
+        log_id, content = split_log_line(text)
+        if not log_id:
             return None  # Return None for invalid timestamp format
             
         date = parse_time_string(log_id)
-        
-        # Check if there's a comma and space after timestamp
-        if len(text) < 17 or text[15:17] != ', ':
-            return None  # Return None if format is incorrect
-            
-        # Extract content (should start after timestamp + comma + space = 17 chars)
-        content = text[17:] if len(text) > 17 else ""
             
         # Only get image if we have a valid timestamp
         image = get_base64_image_with_log(log_id=log_id, folder_name=Path(file_path).stem)
@@ -221,7 +226,8 @@ def get_logs(limit=0):
                     continue
                 
                 # Check if line starts with a valid timestamp
-                if not re.match(r'^\d{8}-\d{6},', line):
+                line_id, _ = split_log_line(line)
+                if not line_id:
                     print(f"Skipping line without valid timestamp: {line[:30]}...")
                     continue
                 
@@ -274,9 +280,9 @@ def get_latest_log():
                     continue
                 
                 # Check if line starts with a valid timestamp and has content
-                if re.match(r'^\d{8}-\d{6},', line) and len(line) > 17:
-                    # Check if there's actual content after the timestamp
-                    content_part = line[17:].strip()
+                line_id, content_part = split_log_line(line)
+                if line_id and content_part:
+                    content_part = content_part.strip()
                     if content_part:  # Only consider lines with actual content
                         last_valid_line = line
             f.close()
@@ -370,7 +376,11 @@ def delete_log(log_id, folder_name):
         with open(filename, "r", encoding='utf-8') as file:
             lines = file.readlines()
         with open(temp_filename, "w", encoding='utf-8') as new_file:
-            newLines = [line.rstrip('\r\n') for line in lines if line[:15] != log_id]
+            newLines = []
+            for line in lines:
+                line_id, _ = split_log_line(line.rstrip('\r\n'))
+                if line_id != log_id:
+                    newLines.append(line.rstrip('\r\n'))
             for line in newLines:
                 if line != newLines[0]:
                     new_file.write('\n')
@@ -397,19 +407,23 @@ def update_log_text(log_id, folder_name, text, translated_text=None):
     filename = '{}/{}.txt'.format(TEXT_LOG_PATH, folder_name)
     if (Path(filename).is_file()):
         temp_filename = '{}/temp.txt'.format(TEXT_LOG_PATH)
-        with codecs.open(filename, 'r', encoding='utf-8') as fi, \
-            codecs.open(temp_filename, 'w', encoding='utf-8') as fo:
+        with log_file_lock:
+            with codecs.open(filename, 'r', encoding='utf-8') as fi:
+                lines = [line.rstrip('\r\n') for line in fi]
 
-            for line in fi:
-                line_id = line[:15]
-                if (line_id == log_id):
-                    fo.write('{}, {}'.format(log_id, log_content))
-                else:
-                    fo.write(line)
+            with codecs.open(temp_filename, 'w', encoding='utf-8') as fo:
+                for index, line in enumerate(lines):
+                    if index > 0:
+                        fo.write('\n')
+                    line_id, _ = split_log_line(line)
+                    if (line_id == log_id):
+                        fo.write('{}, {}'.format(log_id, log_content))
+                    else:
+                        fo.write(line)
 
-        # Remove original file and rename the temporary as the original one
-        os.remove(filename)
-        os.rename(temp_filename, filename)
+            # Remove original file and rename the temporary as the original one
+            os.remove(filename)
+            os.rename(temp_filename, filename)
         return
     return
         
@@ -439,7 +453,7 @@ def update_log_with_translation(log_id, text, translated_text):
     """
     try:
         # Validate log_id format to prevent file corruption
-        if not log_id or len(log_id) != 15:
+        if not log_id or not is_valid_log_id(log_id):
             print(f"Invalid log ID format: {log_id}")
             return
         
@@ -490,7 +504,7 @@ def repair_log_files():
             with open(log_file, 'r', encoding='utf-8') as f:
                 for line in f:
                     # Check if line starts with a valid timestamp format
-                    if len(line) >= 15 and re.match(r'^\d{8}-\d{6}', line[:15]):
+                    if len(line) >= 15 and LOG_ID_PREFIX_PATTERN.match(line[:15]):
                         # This is a new valid line
                         if current_valid_line:
                             valid_lines.append(current_valid_line)

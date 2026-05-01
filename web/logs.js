@@ -1,6 +1,7 @@
 const ANKI_CONFIG = "ANKICONFIG";
 
 let currentLogs = [];
+let pendingLogUpdates = {};
 window.tippyInstances = [];
 let activeCardLogId = "";
 const loadingScreenDelay = setTimeout("showLoadingScreen()", 400);
@@ -76,18 +77,23 @@ async function loadGameScriptFromFile() {
 eel.expose(updateLogDataById);
 function updateLogDataById(logId, data) {
 	const log = getLogById(logId);
-	if (log) {
-		for (const property in data) {
-			currentLogs.find((log) => log.id === logId)[property] = data[property];
-		}
+	if (!log) {
+		pendingLogUpdates[logId] = { ...(pendingLogUpdates[logId] || {}), ...data };
+		return;
+	}
+
+	for (const property in data) {
+		log[property] = data[property];
+	}
+	if (getLogElementById(logId)) {
 		refreshLogElement(logId);
-		// persist text logs and update main window if game script matches
-		if (getLogById(logId).isMatched) {
-			updateLogFileById(logId);
-			const latestLog = currentLogs[currentLogs.length - 1];
-			if (logId === latestLog.id) {
-				eel.update_main_window_text(latestLog.text)();
-			}
+	}
+	// persist text logs and update main window if game script matches
+	if (getLogById(logId).isMatched) {
+		updateLogFileById(logId);
+		const latestLog = currentLogs[currentLogs.length - 1];
+		if (logId === latestLog.id) {
+			eel.update_main_window_text(latestLog.text)();
 		}
 	}
 }
@@ -136,6 +142,10 @@ function addLogs(newLogs) {
 	const logsContainer = document.getElementById("logsContainer");
 	let needScroll = true;
 	newLogs.forEach((newLog) => {
+		if (pendingLogUpdates[newLog.id]) {
+			newLog = { ...newLog, ...pendingLogUpdates[newLog.id] };
+			delete pendingLogUpdates[newLog.id];
+		}
 		const logItem = logToHtml(newLog);
 		logsContainer.append(logItem);
 		currentLogs.push(newLog);
@@ -482,14 +492,13 @@ function logToHtml(log) {
 		}
 	}
 
-	// Cập nhật hiển thị với định dạng mới để bao gồm bản dịch
-	if (log.translated_text) {
-		// Tạo định dạng hiển thị: văn bản gốc + dòng phân cách + bản dịch
-		logText.innerHTML = `${log.text}<hr class="translation-divider">${log.translated_text}`;
-		// Thêm class để CSS có thể định dạng
+	const translationBlock = formatTranslationBlock(log);
+	if (translationBlock) {
+		logText.innerHTML = `${escapeHtml(log.text)}${translationBlock}`;
 		logText.classList.add("has-translation");
 	} else {
 		logText.innerText = log.text;
+		logText.classList.remove("has-translation");
 	}
 
 	logItemClone.hidden = false;
@@ -788,6 +797,25 @@ function refreshCardContent(logId) {
 		// Refresh Content
 		instance.setContent(formatCard(logId, cardContent).innerHTML);
 	}
+}
+
+function escapeHtml(text) {
+	const div = document.createElement("div");
+	div.innerText = text || "";
+	return div.innerHTML;
+}
+
+function formatTranslationBlock(log) {
+	if (log.translated_text) {
+		return `<hr class="translation-divider"><span class="translation-text">${escapeHtml(log.translated_text)}</span>`;
+	}
+	if (log.translation_pending) {
+		return `<hr class="translation-divider"><span class="translation-loading"><span class="translation-spinner"></span>Đang dịch...</span>`;
+	}
+	if (log.translation_error) {
+		return `<hr class="translation-divider"><span class="translation-error">${escapeHtml(log.translation_error)}</span>`;
+	}
+	return "";
 }
 
 eel.expose(addActiveCardToAnki);

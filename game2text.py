@@ -31,6 +31,9 @@ from config import r_config, r_config_all, r_config_section, w_config, APP_CONFI
 
 session_start_time = get_time_string()
 textractor = None
+TRANSLATION_QUEUE_LIMIT = 5
+translation_executor = concurrent.futures.ThreadPoolExecutor(max_workers=TRANSLATION_QUEUE_LIMIT)
+translation_queue_slots = threading.BoundedSemaphore(TRANSLATION_QUEUE_LIMIT)
 
 # run_eel()
 
@@ -43,25 +46,59 @@ def close(page, sockets):
 
 @eel.expose     
 def recognize_image(engine, image, orientation):
-    return detect_and_log(engine, image, orientation, session_start_time, get_time_string())
+    response = detect_and_log(engine, image, orientation, session_start_time, get_time_string())
+    if response and response.get('result'):
+        queue_log_translation(response['id'], response['result'])
+    return response
 
 @eel.expose
 def log_output(text):
     log_id = get_time_string()
-    
-    # Automatically translate the text for logging
-    translated_text = None
-    try:
-        # Only translate if the text is not empty
-        if text and len(text.strip()) > 0:
-            translated_text = multi_translate(text)
-    except Exception as e:
-        print(f"Translation error: {str(e)}")
-        
-    # Log the text with its translation
-    log_text(session_start_time, log_id, text, translated_text)
+    log_text(session_start_time, log_id, text)
     log_media(session_start_time, log_id)
+    queue_log_translation(log_id, text)
     return log_id
+
+def queue_log_translation(log_id, text):
+    if not text or len(text.strip()) == 0:
+        return
+
+    if not translation_queue_slots.acquire(blocking=False):
+        queue_full_message = "Bạn đã chạm giới hạn queue dịch. Hãy đợi các câu trước dịch xong rồi dịch tiếp."
+        eel.updateLogDataById(log_id, {
+            'translation_pending': False,
+            'translation_status': 'queue_full',
+            'translation_error': queue_full_message
+        })()
+        return
+
+    eel.updateLogDataById(log_id, {
+        'translation_pending': True,
+        'translation_status': 'pending',
+        'translation_error': None
+    })()
+    translation_executor.submit(translate_log_in_background, log_id, text)
+
+def translate_log_in_background(log_id, text):
+    try:
+        translated_text = multi_translate(text)
+        update_log_text(log_id, session_start_time, text, translated_text)
+        eel.updateLogDataById(log_id, {
+            'text': text,
+            'translated_text': translated_text,
+            'translation_pending': False,
+            'translation_status': 'done',
+            'translation_error': None
+        })()
+    except Exception as e:
+        error_message = f"Translation Error: {str(e)}"
+        eel.updateLogDataById(log_id, {
+            'translation_pending': False,
+            'translation_status': 'error',
+            'translation_error': error_message
+        })()
+    finally:
+        translation_queue_slots.release()
 
 @eel.expose
 def export_image_filter_profile(profile):

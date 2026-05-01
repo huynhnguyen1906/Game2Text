@@ -311,7 +311,7 @@ function updateOutput(text, logging = true) {
 	if (outputToClipboard && !clipboardMode) {
 		eel.copy_text_to_clipboard(text)();
 	}
-	if (showTranslation) {
+	if (showTranslation && !logging) {
 		translate(text);
 	}
 	return { value: true }; // Thêm return value
@@ -623,7 +623,7 @@ function recognize_image(image) {
 			if (outputToClipboard) {
 				await eel.copy_text_to_clipboard(response.result)();
 			}
-			if (showTranslation) {
+			if (showTranslation && !response.translation_handled_by_log) {
 				await translate(response.result);
 			}
 			return { value: true }; // Thêm return value
